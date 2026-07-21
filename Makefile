@@ -9,11 +9,12 @@ test:
 	pytest tests/
 
 lint:
-	flake8 src/ tests/
+	ruff format --check src/ tests/
+	ruff check src/ tests/
 
 format:
-	black src/ tests/
-	isort src/ tests/
+	ruff format src/ tests/
+	ruff check --fix src/ tests/
 
 typecheck:
 	mypy src/
@@ -21,7 +22,7 @@ typecheck:
 build:
 	python -m build
 
-ci-lint: format lint typecheck build
+ci-lint: lint typecheck build
 	twine check dist/*
 
 clean:

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,8 @@ version = "0.0.1a0"
 description = "Django integration for the Whenever datetime library"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "Gabriel Mitelman Tkacz", email = "gabriel@tkacz.dev.br"},
 ]
@@ -16,7 +17,6 @@ keywords = ["datetime", "date", "time", "timezone", "django"]
 classifiers = [
     "Development Status :: 1 - Planning",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -41,6 +41,7 @@ dev = [
     "pytest-cov>=4.0",
     "pytest-django>=4.5",
     "mypy>=1.0",
+    "django-stubs>=6.0.2",
     "types-setuptools",
     "ruff>=0.4",
     "build>=0.10",
@@ -78,15 +79,6 @@ disable_error_code = ["no-untyped-def"]
 module = "rest_framework.*"
 ignore_missing_imports = true
 
-[tool.black]
-target-version = ["py310"]
-line-length = 88
-
-[tool.isort]
-profile = "black"
-py_version = "310"
-line_length = 88
-
 [tool.ruff]
 target-version = "py310"
 
@@ -103,9 +95,14 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
+testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+addopts = ["-v", "--strict-markers"]
+filterwarnings = [
+    "ignore:PlainDateTimeField received a timezone-aware datetime:UserWarning",
+]
 
 [tool.ruff.format]
 quote-style = "double"

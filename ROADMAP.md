@@ -86,13 +86,13 @@ Initial release ships basic admin support via `formfield()`. This milestone adds
 
 ## Performance
 
-- [ ] **Bulk `from_db_value` optimization**: batch conversion of database rows to whenever types instead of per-row Python calls
+- [ ] **Bulk `from_db_value` optimization**: Django's supported field converter API is value-at-a-time. A batch implementation currently requires invasive query compiler or queryset customization, so this is deferred until Django exposes a contained hook or benchmarks justify that complexity.
 - [ ] **Connection-level caching** for SQLite custom functions registered via `create_function()`
 
 ## Documentation and Developer Experience
 
+- The initial step-by-step [`DateTimeField` migration guide](README.md#migrating-from-djangos-datetimefield) is available in the README.
 - [ ] **Sphinx documentation site** with full API reference, migration guide, and cookbook
-- [ ] **Migration guide**: step-by-step "Converting from Django's DateTimeField to whenever-django"
 - [ ] **Comparison matrix**: feature comparison with `django-timezone-field`, `django-model-utils`, and stdlib `DateTimeField`
 
 ## Versioning Policy

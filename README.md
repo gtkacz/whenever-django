@@ -124,7 +124,11 @@ class LegacyEvent(models.Model):
     timestamp = InstantField(from_stdlib=True)
 ```
 
-This is opt-in, not default &mdash; preserving whenever's type-safety philosophy. `from_stdlib` affects programmatic assignment and ORM writes; form fields and DRF serializers always parse from strings.
+This is opt-in, not default &mdash; preserving whenever's type-safety
+philosophy. `from_stdlib` allows the corresponding stdlib value during ORM
+write preparation. It does not eagerly convert the instance attribute on
+assignment; after a database reload, the attribute is the matching whenever
+type. Form fields and DRF serializers always parse from strings.
 
 Fields without a stdlib equivalent (`YearMonthField`, `MonthDayField`, `ItemizedDeltaField`, `ItemizedDateDeltaField`) raise `TypeError` if `from_stdlib=True` is passed.
 
@@ -227,6 +231,128 @@ whenever-django Migration Audit Report
 Found 3 field(s) that can be converted.
 ```
 
+## Migrating from Django's `DateTimeField`
+
+The existing column storage is usually compatible because `InstantField` and
+`PlainDateTimeField` use Django's datetime column types. Django may still emit
+an `ALTER TABLE` or rebuild a table, so choosing the right semantics and
+inspecting the generated SQL are essential.
+
+Back up the database and rehearse the migration against the same database
+backend you run in production. Always inspect the generated migration and its
+SQL before applying it.
+
+### 1. Classify each datetime
+
+Run the audit to find candidates:
+
+```bash
+python manage.py whenever_audit
+```
+
+Then choose a field based on what the value means, not its current `tzinfo`:
+
+| Existing value means | Replacement | Important constraint |
+|-----------------------|-------------|----------------------|
+| A unique moment in time | `InstantField` | Use with `USE_TZ = True`; existing values must be aware or already normalized to UTC |
+| A local wall-clock value with no timezone | `PlainDateTimeField` | Use only when the value is intentionally naive |
+| A moment plus its IANA timezone | `ZonedDateTimeField` | Requires a new paired `_tz` column and an explicit backfill |
+| A moment plus its fixed UTC offset | `OffsetDateTimeField` | Requires a new paired `_offset` column and an explicit backfill |
+
+A Django `DateTimeField` does not preserve the original IANA timezone. If you
+need `ZonedDateTimeField`, choose the correct zone from application data during
+the backfill; it cannot be recovered from the timestamp alone.
+
+Do not change `USE_TZ` and the model field in the same deployment. Normalize
+legacy naive data first, using an explicitly chosen timezone and handling
+ambiguous or skipped times at DST transitions.
+
+### 2. Use a compatibility release
+
+Start with `from_stdlib=True` so code that still writes stdlib `datetime`
+objects continues to work during the transition:
+
+```python
+from django.db import models
+from whenever_django.fields import InstantField
+
+
+class Event(models.Model):
+    created_at = InstantField(from_stdlib=True)
+```
+
+`from_stdlib=True` affects writes only. As soon as this field is deployed,
+values loaded from the database are `whenever.Instant` instances, so update
+read-side code in the same release.
+
+For a deliberately naive column, use the same staged approach with
+`PlainDateTimeField(from_stdlib=True)` instead.
+
+`InstantField` does not accept Django's `auto_now` or `auto_now_add` options.
+Replace `auto_now_add=True` with a callable default:
+
+```python
+import whenever
+
+created_at = InstantField(default=whenever.Instant.now, from_stdlib=True)
+```
+
+Replace `auto_now=True` by assigning `whenever.Instant.now()` explicitly in
+your save/update path. Remember that `QuerySet.update()` does not call
+`Model.save()`.
+
+### 3. Generate and inspect the schema migration
+
+```bash
+python manage.py makemigrations
+python manage.py sqlmigrate your_app 0002
+python manage.py migrate
+```
+
+For an aware `DateTimeField` to `InstantField` conversion, and for a naive
+`DateTimeField` to `PlainDateTimeField` conversion, the physical storage is
+compatible on PostgreSQL and SQLite. Still inspect `sqlmigrate`: constraints,
+indexes, defaults, and backend-specific behavior in your project can turn an
+otherwise simple alteration into a table rewrite.
+
+Composite fields are different. Add a new nullable `ZonedDateTimeField` or
+`OffsetDateTimeField`, backfill both its timestamp and paired metadata column,
+switch application reads, and only then remove the old field. A direct
+`AlterField` cannot invent the missing zone or offset.
+
+### 4. Move application code to whenever
+
+Replace stdlib construction and type assumptions with whenever values:
+
+```python
+import whenever
+
+event = Event.objects.create(created_at=whenever.Instant.now())
+
+event.refresh_from_db()
+assert isinstance(event.created_at, whenever.Instant)
+```
+
+At the application boundary, convert any remaining aware stdlib values
+explicitly with `whenever.Instant(value)`. Fix tests, fixtures, forms, tasks,
+and serializers that assert or emit stdlib `datetime` objects.
+
+Validate representative rows after deployment, especially values around DST
+changes and the minimum/maximum dates used by your application.
+
+### 5. Restore strict typing
+
+Once every writer sends whenever values, remove the compatibility flag:
+
+```python
+class Event(models.Model):
+    created_at = InstantField()
+```
+
+Run `makemigrations` again and inspect the result. `from_stdlib` changes Python
+write behavior, not the underlying column type. Unexpected stdlib writes will
+now fail immediately instead of extending the migration indefinitely.
+
 ## Known Limitations
 
 1. **Composite field rename**: `RenameField` on `ZonedDateTimeField` / `OffsetDateTimeField` does not auto-rename the paired column. Workaround: manually add a second `RenameField` in the migration for the `_tz` / `_offset` column.
@@ -235,7 +361,7 @@ Found 3 field(s) that can be converted.
 
 3. **SQLite limitations**: The `__in_tz` transform uses a Python-level function on SQLite instead of native `AT TIME ZONE`. Correct, but slower than PostgreSQL.
 
-4. **`from_stdlib` scope**: The coercion option affects programmatic Python assignment only. Form fields and DRF serializers parse from strings regardless of this setting.
+4. **`from_stdlib` scope**: The coercion option allows stdlib values during ORM write preparation; it does not eagerly convert values on assignment. Form fields and DRF serializers parse from strings regardless of this setting.
 
 5. **JSON-stored deltas**: `ItemizedDeltaField` and `ItemizedDateDeltaField` use JSON storage, so they cannot participate in database-level arithmetic. F-expression arithmetic falls back to Python-level computation.
 
