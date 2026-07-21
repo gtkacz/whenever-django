@@ -17,7 +17,7 @@ cd whenever-django
 # Create a virtual environment and install dev dependencies
 uv venv
 source .venv/bin/activate
-uv pip install -e ".[dev,drf]"
+uv pip install -e ".[dev,docs,drf]"
 ```
 
 ## Running Tests
@@ -58,6 +58,26 @@ uv run mypy src/
 ```
 
 All public functions and classes must have type annotations.
+
+## Building Documentation
+
+The documentation uses Sphinx, MyST Markdown, and Furo. Build it locally with
+warnings treated as errors:
+
+```bash
+make docs
+```
+
+The equivalent direct command is:
+
+```bash
+uv run sphinx-build -W --keep-going -b html docs docs/_build/html
+```
+
+Open `docs/_build/html/index.html` after a successful build. Add durable user
+guidance to the Sphinx site and keep the README focused on installation and a
+short quick start. Internal plans, brainstorms, and ideation notes must not be
+added to the published toctree.
 
 ## Project Structure
 

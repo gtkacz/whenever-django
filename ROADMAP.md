@@ -60,11 +60,11 @@ Initial release ships basic admin support via `formfield()`. This milestone adds
 
 ## Query Enhancements
 
-- [ ] **`ToInstant(expr)`**: database function converting `ZonedDateTimeField` expression to `Instant` (extract timestamp column)
-- [ ] **`ToZoned(expr, tz_string)`**: project an `InstantField` expression into a `ZonedDateTime` in a given timezone (`AT TIME ZONE` on PostgreSQL, Python fallback on SQLite)
-- [ ] **`DurationBetween(expr1, expr2)`**: subtract two `InstantField` expressions, returning `TimeDelta`
+- [x] **`ToInstant(expr)`**: project a timestamp expression, including a composite field's primary column, as `Instant`
+- [x] **`ToZoned(expr, tz_string)`**: project an instant as `ZonedDateTime` in one validated IANA timezone without changing the timestamp in SQL
+- [x] **`DurationBetween(expr1, expr2)`**: subtract two timestamp expressions through Django's backend temporal API, returning `TimeDelta`
 - [ ] **Full F-expression arithmetic**: `F('end') - F('start')` between two `InstantField` columns yields `TimeDelta`; `F('instant') + F('delta')` yields `Instant`. Register `Combinable` resolution on field output types.
-- [ ] **`__in_tz` transform on SQLite**: improve the Python-level fallback to handle edge cases (DST transitions, historical timezone changes)
+- [ ] **`__in_tz` transform**: add a timezone-aware lookup API for PostgreSQL and SQLite, including DST transitions and historical timezone changes
 
 ## Composite Field Migration Safety
 
@@ -87,13 +87,13 @@ Initial release ships basic admin support via `formfield()`. This milestone adds
 ## Performance
 
 - [ ] **Bulk `from_db_value` optimization**: Django's supported field converter API is value-at-a-time. A batch implementation currently requires invasive query compiler or queryset customization, so this is deferred until Django exposes a contained hook or benchmarks justify that complexity.
-- [ ] **Connection-level caching** for SQLite custom functions registered via `create_function()`
+- [x] ~~**Connection-level caching** for SQLite custom functions registered via `create_function()`~~ — Retired: the shipped query expressions register no library-owned SQLite function. `ToInstant` and `ToZoned` are identity timestamp SQL expressions, while `DurationBetween` uses Django's backend operation.
 
 ## Documentation and Developer Experience
 
-- The initial step-by-step [`DateTimeField` migration guide](README.md#migrating-from-djangos-datetimefield) is available in the README.
-- [ ] **Sphinx documentation site** with full API reference, migration guide, and cookbook
-- [ ] **Comparison matrix**: feature comparison with `django-timezone-field`, `django-model-utils`, and stdlib `DateTimeField`
+- The step-by-step [`DateTimeField` migration guide](https://python-whenever.github.io/whenever-django/migrations.html) is part of the published documentation.
+- [x] **Sphinx documentation site** with full API reference, migration guide, and cookbook
+- [x] **Comparison matrix**: dated, source-linked comparison with `django-timezone-field`, `django-model-utils`, and Django's `DateTimeField`
 
 ## Versioning Policy
 

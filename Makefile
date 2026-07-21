@@ -1,9 +1,9 @@
-.PHONY: help init test lint format typecheck clean build ci-lint
+.PHONY: help init test lint format typecheck docs docs-clean clean build ci-lint
 
 init:
 	uv venv
 	source .venv/bin/activate
-	uv pip install -e ".[dev]"
+	uv pip install -e ".[dev,docs,drf]"
 
 test:
 	pytest tests/
@@ -18,6 +18,12 @@ format:
 
 typecheck:
 	mypy src/
+
+docs:
+	sphinx-build -W --keep-going -b html docs docs/_build/html
+
+docs-clean:
+	rm -rf docs/_build/ docs/api/
 
 build:
 	python -m build

@@ -36,6 +36,11 @@ dependencies = [
 drf = [
     "djangorestframework>=3.14",
 ]
+docs = [
+    "sphinx>=8.1,<9",
+    "myst-parser>=4,<5",
+    "furo>=2024.8.6",
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -50,7 +55,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/python-whenever/whenever-django"
-Documentation = "https://github.com/python-whenever/whenever-django"
+Documentation = "https://python-whenever.github.io/whenever-django/"
 Repository = "https://github.com/python-whenever/whenever-django.git"
 Issues = "https://github.com/python-whenever/whenever-django/issues"
 

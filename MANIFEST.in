@@ -1,4 +1,10 @@
 include README.md
 include LICENSE
 include CHANGELOG.md
+include .readthedocs.yaml
 recursive-include src/whenever_django py.typed
+recursive-include docs *.md *.py *.rst
+prune docs/api
+prune docs/brainstorms
+prune docs/ideation
+prune docs/plans

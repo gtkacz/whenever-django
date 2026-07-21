@@ -25,6 +25,8 @@ class TimeDeltaField(WheneverField):
         return "BigIntegerField"
 
     def _from_db(self, value: Any, connection: Any) -> _whenever.TimeDelta:
+        if isinstance(value, _stdlib.timedelta):
+            return _whenever.TimeDelta(value)
         return _whenever.TimeDelta(microseconds=int(value))
 
     def _to_db(self, value: _whenever.TimeDelta) -> int:
